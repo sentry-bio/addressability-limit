@@ -20,12 +20,13 @@
 -/
 
 import ActiveGeometry.Capacity
+import ActiveGeometry.Chart
 import Mathlib.Tactic
 
-namespace ActiveGeometry.StateEquation
+namespace ActiveGeometry.Chart.StateEquation
 
 open Real
-open Capacity
+open Capacity Chart
 
 /-- The state equation is the conditional equality case of the kernel:
     capacity saturation plus a space-form identification of `h_cap`. -/
@@ -134,4 +135,4 @@ theorem rateMismatch_zero_at_floor
   unfold rateMismatch spaceFormEntropy
   linarith
 
-end ActiveGeometry.StateEquation
+end ActiveGeometry.Chart.StateEquation

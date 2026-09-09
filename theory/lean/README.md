@@ -1,184 +1,186 @@
 # Formal proofs in Lean 4
 
-This directory machine-checks the metric packing count, its convergent-rate
-addressability theorem, and the downstream algebra of the bound. The complete
-statements, hypotheses, and proofs are in the manuscript,
-[`../../paper/addressability-limit.pdf`](../../paper/addressability-limit.pdf);
-the top-level [`README`](../../README.md) maps each declaration below to the
-result it certifies.
+This directory machine-checks the addressability bound, the constrained-capacity
+framework that generalises it, and the algebra downstream of both. The complete
+statements and proofs are in the manuscript,
+[`../../paper/addressability-limit.pdf`](../../paper/addressability-limit.pdf).
 
-The Lean declaration mathematicians should cite is
-`ActiveGeometry.convergent_rate_addressability_limit`
-(`Packing.convergent_rate_addressability_limit`). It is the ordinary-limit
-corollary of the paper's limsup Addressability Limit. In every proper metric
-host, a finite source census with an injective, fixed-resolution separated
-address map, radii tending to infinity, and convergent history growth, radial
-rate, and packing growth satisfies \(\beta\le c\,h_{\mathrm{pack}}\).
+Lean 4 + Mathlib, no `sorry` or `admit`, no custom axioms. Every declaration
+depends on exactly Lean's `propext`, `Classical.choice`, `Quot.sound` — anything
+touching `ℝ` inherits all three from Mathlib's construction of the reals, so
+this is the floor rather than a signal.
 
-## Mathematical hierarchy
-
-The theory has two layers (see the manuscript). **Layer I** is
-universal and curvature-free: the addressability bound, the block-capacity
-identity, and the constrained-capacity ladder. **Layer II** is the curvature
-realization: a space-form identification of \(h_{\mathrm{cap}}\) gives a
-curvature floor; saturation makes that floor an equality (the face of the
-feasible region). Lean formalizes the packing/block portion of Layer I and the
-algebraic skeleton of Layer II. The growth-class identities in
-`Measurability.lean` are instrument mathematics for the occupancy gate,
-not a third layer.
-
-The weighted relational-capacity theorem (Skenderi) is a paper proof, not
-Lean. The Heintze/Schur isotropy result under axiom A3 is a paper proof, not
-Lean.
-
-The principal coordinate-free statement is the Layer I addressability bound
-
-\[
-\beta\le c\,h_{\mathrm{pack}},
-\]
-
-where:
-
-- \(\beta\) is represented-history growth in nats per generative step;
-- \(c\) converts generative steps to radial distance;
-- \(h_{\mathrm{pack}}\) is host packing entropy in nats per radial distance.
-
-For a host whose packing rate equals the real-hyperbolic space-form value
-\(h_{\mathrm{cap}}=(n-1)\sqrt\kappa\),
-
-\[
-\kappa\ge
-\left(\frac{\beta}{c(n-1)}\right)^2.
-\]
-
-Capacity saturation gives equality. If
-\(\beta=h_{\mathrm{eff}}\ln2\) and
-\(\bar\kappa:=c^2\kappa\), the normalized equality is
-
-\[
-\bar\kappa=
-\left(\frac{h_{\mathrm{eff}}\ln2}{n-1}\right)^2.
-\]
-
-The familiar formula without \(c\) is raw curvature only in the
-process-time gauge \(c=1\). In Lean, the logical separation is explicit:
-
-```text
-Addressable β c hcap
-  + CapacitySaturated β c hcap
-  + hcap_eq_spaceForm hcap n κ
-  → normalized state equation
+```bash
+cd theory/lean
+lake exe cache get
+lake build
 ```
 
-Neither saturation nor the space-form identification is part of `Addressable`.
-The predicate `hcap_eq_spaceForm` is an algebraic identification of rates, not
-a theorem that the host is \(\mathbb H^n_\kappa\).
+## The statement to cite
 
-## Files
+`ActiveGeometry.Packing.convergent_rate_addressability_limit` — in every proper
+metric host, a finite source census with an injective, fixed-resolution
+separated address map, radii tending to infinity, and convergent history growth
+`β`, radial rate `c`, and packing growth `h_pack`, satisfies
 
-```text
-ActiveGeometry/
-├── Packing.lean         # metric kernel; convergent-rate limit
-├── Capacity.lean        # algebra of the bound (floor, gauge, η)
-├── StateEquation.lean   # optional face: saturation + space-form chart
-└── Measurability.lean   # growth-class gate identities (instrument)
-```
+$$\beta \le c\,h_{\mathrm{pack}}.$$
 
-### `Packing.lean`
+It is the ordinary-limit corollary of the paper's limsup Addressability Limit.
 
-This file uses Mathlib's canonical `Metric.packingNumber`; it does not
-axiomatize a capacity envelope. Formalized results include:
+For measurement, cite `Packing.logCard_div_radius_le_packingRate` instead:
 
-| Declaration | Meaning |
+$$\frac{\log N(R)}{r(R)} \;\le\; \frac{\log P(B(o,r(R)),\varepsilon)}{r(R)}.$$
+
+This is what a measurement computes. The asymptotic version discards an
+additive constant, which is why an achieved rate can exceed `h_pack` at finite
+radius without violating anything.
+
+## A host has a profile, not a capacity
+
+The organising idea of `Constrained.lean`. Two hosts can hold the same number of
+distinguishable states and differ completely in their ability to preserve
+ancestry, refinement, or metric relations. So the scalar question *how much
+information fits?* is replaced by
+
+> how much history fits, while retaining a specified amount of its shape?
+
+Three objects are kept apart, because conflating them makes the first of the two
+questions below unstatable:
+
+| object | owns |
+|---|---|
+| `Source` | the growing census of histories, and its own filtration |
+| `Code` | addresses and a radial budget, and nothing else |
+| `Obligation` | a predicate on a (source, code) **pair** |
+
+which separates:
+
+| | question | who asks it |
+|---|---|---|
+| `Represents o ε 𝒜 σ c` | can **this** source be held here? | an experiment |
+| `Achievable o ε 𝔖 𝒜 β c` | what rates does the host support over a **declared** family `𝔖`? | a theorem |
+
+Obligations form a **product poset**, not a chain. Nothing orders retention
+against relational fidelity.
+
+- *metric obligations* — what of the source's shape must survive:
+  `Faithful` (cardinality and separation), `Radial` (the rooted budget),
+  `Relational` (pairwise distances to distortion `(D,K)`).
+- *online obligations* — how the code is presented in time: `Stable` (the past
+  is not rewritten), `Causal` (per-step motion is bounded).
+- *retention* is **not** an obligation. Whether a census accretes is settled by
+  the source; no address map changes it. It is `Source.Retentive`, and it
+  enters a capacity claim by restricting `𝔖`.
+
+## Base feasibility is compulsory
+
+`Code.radius` is a free field, unrelated to where `addr` actually puts anything.
+Without base feasibility a code may map every history to a single point and
+still declare radii growing at rate `c`. Two theorems on the same one-point host
+pin this down, and both live in the file so neither can rot:
+
+| declaration | says |
+|---|---|
+| `vacuity_without_base` | the rate conditions **alone** report `log 2` nats per generative step in `Unit` |
+| `unit_host_only_zero` | with `Base` in force the same host admits **only** `0`, since faithful addressing into one point forces singleton censuses |
+
+## Declarations
+
+### `Packing.lean` — the metric kernel
+
+| declaration | meaning |
 |---|---|
 | `card_le_packingCount` | every finite separated subset of a ball is bounded by its exact packing number |
-| `subball_fraction_le_packing_fraction` | the fraction of codewords in any smaller sub-ball is bounded by its packing fraction (finite-radius radial concentration) |
 | `exists_optimal_blockCode` | an exact finite packing code exists whenever the ball packing number is finite |
-| `exists_optimal_blockCode_of_properSpace` | exact finite-block achievability in every proper metric host |
-| `hasFinitePacking_of_properSpace` | in any proper metric space the finiteness hypothesis is a theorem |
-| `FaithfulRepresentation` | finite source census and explicit address map; injective and separated on that census |
-| `history_card_le_packingCount` | faithfully addressed source histories obey the packing bound at every depth |
-| `historyRate_le_capacity_eventually` | finite source counts induce the normalized rate inequality |
-| `convergent_rate_addressability_limit_of_hasFinitePacking` | diverging radii and three ordinary limits prove `Addressable β c hpack` |
-| `convergent_rate_addressability_limit` | the same theorem with packing finiteness discharged in a proper host |
-| `no_positive_growth_at_zero_capacity` | zero packing capacity excludes positive represented growth |
-| `RetainedRepresentation` | faithful representation plus nested source censuses (`histories_monotone`); addresses may change |
-| `history_card_mono` | retention makes source-history counts nondecreasing in depth |
+| `hasFinitePacking_of_properSpace` | in any proper metric space, finiteness is a theorem, not a hypothesis |
+| `subball_fraction_le_packing_fraction` | the finite sub-ball count behind radial concentration |
+| `history_card_le_packingCount` | faithfully addressed histories obey the packing bound at every depth |
+| `logCard_div_radius_le_packingRate` | the directly measurable finite-depth form |
+| `convergent_rate_addressability_limit` | the bound, with finiteness discharged in a proper host |
 
-The formal theorem uses ordinary finite limits for represented growth, radial
-rate, and packing growth. The full spine's limsup version is a more general
-paper theorem. `HasFinitePacking` is a hypothesis of the general theorem and a
-proved consequence of `ProperSpace` (ℝⁿ, hyperbolic space, and every complete
-Riemannian manifold via Hopf–Rinow), so the intended host class needs no extra
-assumption.
+### `Constrained.lean` — the capacity profile
 
-The upper bound and `exists_optimal_blockCode` together identify operational
-finite-block address capacity exactly with metric packing capacity. This
-achievability result is fully metric and host-agnostic, but deliberately does
-not assert that optimal codebooks at successive radii are nested, causal, or
-preserve a source hierarchy's relational metric. The asymptotic block identity
-\(C_{\rm block}(c,\varepsilon)=c h_{\rm pack}\) and stronger constrained
-achievability problems remain paper-level statements.
-
-### `Capacity.lean`
-
-Formalized results include:
-
-| Declaration | Meaning |
+| declaration | meaning |
 |---|---|
-| `addressability_forces_positive_entropy` | \(\beta>0\), \(c>0\), and \(\beta\le c h_{\rm cap}\) imply \(h_{\rm cap}>0\) |
-| `efficiency_le_one` | \(\eta=\beta/(c h_{\rm cap})\le1\) |
-| `curvature_at_least_floor` | a space-form capacity inequality gives a curvature lower bound |
-| `addressable_spaceForm_floor` | composes `Addressable` with `hcap_eq_spaceForm` |
-| `saturated_curvature_eq_floor` | saturation fixes raw curvature once \(c,n\) are fixed |
-| `saturated_spaceForm_eq_floor` | composes saturation with a space-form identification |
-| `floor_saturates_capacity` | the curvature floor realizes equality |
-| `normalized_floor_eq_saturation` | multiplying by \(c^2\) gives the saturation-face value |
-| `process_time_gauge` | \(c=1\) recovers the familiar formula |
-| `normalized_curvature_scale_invariant` | \(c^2\kappa\) is invariant under radial rescaling |
-| `normalizedCurvatureAtSaturation_anti_n` | saturation-face value decreases algebraically with dimension; not a selection of \(n=2\) |
+| `packingNumberOn` | Mathlib's `packingNumber` with one further indexed supremum; the primitive for **intrinsic, host-side** obligations only |
+| `packingNumberOn_unconstrained` | the unconstrained case is exactly Mathlib's |
+| `Source` / `Code` / `Obligation` | the three separated objects |
+| `Represents` / `Achievable` | fixed-source representability, and host capacity over a declared family |
+| `Achievable.mono_obligation` | more obligation, fewer achievable rates |
+| `Achievable.mono_family` | a larger family cannot achieve less |
+| `addressable_of_achievable` | **the base square**: every rung, over every family, obeys `β ≤ c·h_pack` |
+| `Rates` / `Rates_bddAbove` | capacity as a **set**, and its boundedness from the base square |
+| `capacity` | the scalar, derived afterwards, with every dependency explicit |
+| `not_achievable_pos_of_hpack_zero` | the trichotomy's third horn, at every rung and any radial rate |
+| `Separates` | the **target** of a separation theorem — inhabited nowhere |
 
-### `StateEquation.lean`
+Capacity is a set before it is a number. Defining the scalar first invites
+`sSup` of an unbounded real set, which silently returns `0`.
 
-The optional equality-case face. Formalized results include:
+### `Capacity.lean` — scalar algebra of the bound
 
-| Declaration | Meaning |
+| declaration | meaning |
 |---|---|
-| `normalized_state_equation` | saturation plus `hcap_eq_spaceForm` yields the normalized equality |
-| `rateMismatchSq_eq_scaled_sqrtMismatch` | the two gap diagnostics are one object up to \((c(n-1))^2\) |
-| `rateMismatchSq_zero_iff` | the squared rate gap vanishes exactly on the face |
-| `rateMismatch_zero_at_floor` | space-form capacity at the curvature floor equals demand |
+| `Addressable` | `β ≤ c · h_cap` |
+| `achievedRate` | `λ = β / c`; both sides of the bound in the same units, `c` demoted to a gauge |
+| `achievedRate_le` | the bound as `λ ≤ h_cap` |
+| `not_addressable_of_lt` | the contrapositive — the empirically observable content |
+| `efficiency_le_one` | `η = β/(c·h_cap) ≤ 1` |
+| `addressability_forces_positive_entropy` | `β>0`, `c>0` imply `h_cap>0` |
 
-These diagnostics are not a Lyapunov theorem and not an evolution law.
+### `Chart.lean` — the space-form chart (optional)
 
-### `Measurability.lean`
+`h_pack` is a rate in nats per unit radius. This file converts it into
+geometers' units, and that is all it does. If — and only if — one assumes the
+host is isotropic and a space form, that rate is `(n-1)√κ`. The conversion
+imposes no constraint and discovers nothing about the host; the gauge lemmas are
+the unit-consistency conditions of a dictionary entry.
 
-| Declaration | Meaning |
-|---|---|
-| `midpoint_exponent_eq` | endpoint-matched log-gap at \(\sqrt{r}\) (Lemma 1.2) |
-| `spanInformation_eq_logGap_logMean` | maximum gap is \(\Delta(r,d)\) at the logarithmic mean |
-| `logGapDeriv_logMean` | formal derivative vanishes at that mean |
-| `spanInformation_pos` | \(\Delta(r,d)>0\) for \(r>1\), \(d>0\) |
+Nothing in `Capacity`, `Packing` or `Constrained` depends on this file.
+`hcap_eq_spaceForm` is a **predicate**, assumed where used, never derived.
+`Chart.StateEquation` holds the equality-case face and its gap diagnostics,
+which are not a Lyapunov theorem and not an evolution law.
 
-Lean does not formalize Hellinger distance, Le Cam's lemma, or the
-Poisson-increment model.
+### `Measurability.lean` — growth-class instrument
 
-## What Lean does not establish
+Elementary identities behind the finite-sample growth-class gate:
+`midpoint_exponent_eq`, `spanInformation_eq_logGap_logMean`,
+`logGapDeriv_logMean`, `spanInformation_pos`. An instrument, not a theory layer.
+Hellinger distance, Le Cam's lemma, and the Poisson-increment model are not
+formalized.
 
-The formalization intentionally does not claim to machine-check:
+## Status vocabulary
+
+Used throughout, and worth keeping distinct:
+
+- **defined** — an object exists; nothing is proved about it. `tax`,
+  `availability`, `Relational`, `Causal`, `Separates`.
+- **Lean-checked** — proved here. `convergent_rate_addressability_limit`,
+  `addressable_of_achievable`, `Rates_bddAbove`, the two one-point witnesses.
+- **paper-proved** — proved in the manuscript, not here. Theorem 5.3, the
+  balloon, Theorem 7.1.
+- **open** — neither.
+
+A definition is not a computed capacity. A monotonicity lemma is not an
+achievability theory. A paper theorem is not a Lean theorem.
+
+## What this library does not establish
 
 1. the full limsup generalization of the convergent-rate packing theorem;
-2. equivalence of packing and volume entropy under bounded geometry;
-3. the space-form classification or the hyperbolic volume formula;
-4. Theorem 4.4 (Skenderi / weighted relational capacity of \(\mathbb H^n_\kappa\));
-5. Theorem 7.1 (Heintze isotropy / axiom A3);
-6. the Buneman/Gromov tree-classification theorems;
-7. Sarkar's low-distortion embedding theorem;
-8. nested, causal, or relation-preserving achievability;
-9. a physical dynamics toward capacity saturation;
-10. empirical membership of any biological or linguistic system;
-11. alphabet or DNA entropy-rate ceilings (those are substrate constants,
-    not the addressability kernel).
+2. achievability at **any** rung above the block one — no member of the profile
+   beyond `C_block` is computed here;
+3. whether `Separates` is inhabited at any pair of rungs;
+4. transformation laws for `capacity` under quasi-isometry, and therefore
+   whether a bare `θ(M)` is a licensed notation at all — exponential growth
+   rates at fixed `ε` are not expected to be quasi-isometry invariants;
+5. equivalence of packing and volume entropy under bounded geometry;
+6. the space-form classification or the hyperbolic volume formula;
+7. Theorem 4.4 (Skenderi / weighted relational capacity of ℍⁿ_κ);
+8. Theorem 7.1 (Heintze isotropy / axiom A3);
+9. the Buneman/Gromov tree-classification theorems, or Sarkar's embedding;
+10. a physical dynamics toward capacity saturation;
+11. empirical membership of any biological or linguistic system;
+12. alphabet or DNA entropy-rate ceilings — substrate constants, not the kernel.
 
 These are respectively paper proofs, classical cited results, open modeling
 choices, or empirical questions.
@@ -186,19 +188,8 @@ choices, or empirical questions.
 ## Tree dimension
 
 The four-point condition classifies exact tree metrics. Minimal smooth ambient
-dimension \(n=2\) comes from embeddability: a genuinely branching tree cannot
-live faithfully in a connected one-dimensional Riemannian manifold, while
-finite trees admit arbitrarily low-distortion embeddings in
-\(\mathbb H^2\).
-
-The Lean theorem that normalized curvature decreases with \(n\) is algebraic
-monotonicity. It is not a proof that an objective selects \(n=2\).
-
-## Build
-
-```bash
-cd theory/lean
-lake build
-```
-
-Requires Lean 4 and Mathlib. The checked files contain no `sorry` declarations.
+dimension `n = 2` comes from embeddability: a genuinely branching tree cannot
+live faithfully in a connected one-dimensional Riemannian manifold, while finite
+trees admit arbitrarily low-distortion embeddings in ℍ². The Lean theorem that
+normalized curvature decreases with `n` is algebraic monotonicity, not a proof
+that an objective selects `n = 2`.

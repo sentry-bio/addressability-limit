@@ -256,6 +256,30 @@ theorem history_card_le_packingCount
     hfinite hρ
   simpa [packingCount] using ENat.toNat_le_toNat henat htop
 
+/-- **The directly measurable form.** At every depth, retained history per unit
+    representational radius is bounded by the host's packing entropy at that
+    radius:
+
+        log N(R) / r(R)  ≤  log P(B(o, r(R)), ε) / r(R).
+
+    This is what a measurement computes. The asymptotic rate theorem below is a
+    corollary of it that discards the additive constant, and the constant is
+    exactly why an achieved rate may exceed `h_pack` at finite radius without
+    violating anything. -/
+theorem logCard_div_radius_le_packingRate
+    {H : Type*} (o : M) (ε : ℝ≥0) (rep : FaithfulRepresentation H o ε)
+    (hfinite : HasFinitePacking o ε) (R : ℕ) (hr : 0 < rep.radius R) :
+    Real.log ((rep.histories R).card : ℝ) / rep.radius R
+      ≤ packingRate o ε (rep.radius R) := by
+  have hcount := history_card_le_packingCount o ε rep hfinite R hr.le
+  have hcard_pos : 0 < ((rep.histories R).card : ℝ) := by
+    exact_mod_cast Finset.card_pos.mpr (rep.histories_nonempty R)
+  have hcount_real : ((rep.histories R).card : ℝ)
+      ≤ (packingCount o ε (rep.radius R) : ℝ) := by exact_mod_cast hcount
+  have hlog := Real.log_le_log hcard_pos hcount_real
+  unfold packingRate
+  exact (div_le_div_iff_of_pos_right hr).2 hlog
+
 /-- The finite-depth count inequality becomes a pointwise inequality between
     normalized logarithmic rates away from the irrelevant depth `R = 0`. -/
 theorem historyRate_le_capacity_eventually

@@ -21,7 +21,9 @@
 -/
 
 import Mathlib.Analysis.SpecialFunctions.Log.Basic
+import Mathlib.Analysis.SpecialFunctions.Log.Deriv
 import Mathlib.Analysis.SpecialFunctions.Pow.Real
+import Mathlib.Analysis.Calculus.Deriv.Mul
 import Mathlib.Tactic
 
 namespace ActiveGeometry.Measurability
@@ -162,5 +164,95 @@ theorem spanInformation_pos (d r : ℝ) (hd : 0 < d) (hr : 1 < r) :
     mul_pos hd hdiff
   rw [← spanInformation_eq_logGap_logMean d r hr, hform]
   exact this
+
+/-- `logGapDeriv` really is the derivative of `logGap`. Without this, the
+    name `logGapDeriv` asserts a relationship the kernel never checks. -/
+theorem hasDerivAt_logGap (d r t : ℝ) (ht : t ≠ 0) :
+    HasDerivAt (logGap d r) (logGapDeriv d r t) t := by
+  have h1 : HasDerivAt (fun t : ℝ ↦ d * log t) (d * t⁻¹) t :=
+    (Real.hasDerivAt_log ht).const_mul d
+  have h2 :
+      HasDerivAt (fun t : ℝ ↦ d * (log r / (r - 1)) * (t - 1))
+        (d * (log r / (r - 1))) t := by
+    simpa using ((hasDerivAt_id t).sub_const 1).const_mul (d * (log r / (r - 1)))
+  have h3 :
+      HasDerivAt (fun t : ℝ ↦ d * log t - d * (log r / (r - 1)) * (t - 1))
+        (d * t⁻¹ - d * (log r / (r - 1))) t := h1.sub h2
+  have hrw : logGapDeriv d r t = d * t⁻¹ - d * (log r / (r - 1)) := by
+    unfold logGapDeriv; rw [div_eq_mul_inv]
+  rw [hrw]
+  exact h3
+
+/-- The logarithmic mean maximizes `logGap` over all positive `t` — not merely
+    on the window `[1, r]`. The content is the elementary inequality
+    `log u ≤ u - 1` evaluated at `u = t / logMean r`; the critical-point
+    computation is not needed. -/
+theorem logGap_le_logGap_logMean (d r t : ℝ)
+    (hd : 0 ≤ d) (hr : 1 < r) (ht : 0 < t) :
+    logGap d r t ≤ logGap d r (logMean r) := by
+  have hlog : 0 < log r := log_pos hr
+  have hr1 : 0 < r - 1 := by linarith
+  have hmpos : 0 < logMean r := div_pos hr1 hlog
+  have hcancel :
+      log r / (r - 1) * (t - logMean r) = t / logMean r - 1 := by
+    unfold logMean
+    field_simp
+  have hkey : log (t / logMean r) ≤ t / logMean r - 1 :=
+    Real.log_le_sub_one_of_pos (div_pos ht hmpos)
+  rw [Real.log_div ht.ne' hmpos.ne', ← hcancel] at hkey
+  have hid :
+      logGap d r (logMean r) - logGap d r t
+        = d * (log r / (r - 1) * (t - logMean r)
+            - (log t - log (logMean r))) := by
+    unfold logGap; ring
+  have hnn :
+      0 ≤ d * (log r / (r - 1) * (t - logMean r)
+          - (log t - log (logMean r))) :=
+    mul_nonneg hd (by linarith)
+  linarith
+
+/-- Strict version: the maximizer is unique. -/
+theorem logGap_lt_logGap_logMean (d r t : ℝ)
+    (hd : 0 < d) (hr : 1 < r) (ht : 0 < t) (hne : t ≠ logMean r) :
+    logGap d r t < logGap d r (logMean r) := by
+  have hlog : 0 < log r := log_pos hr
+  have hr1 : 0 < r - 1 := by linarith
+  have hmpos : 0 < logMean r := div_pos hr1 hlog
+  have hm0 : logMean r ≠ 0 := hmpos.ne'
+  have hune : t / logMean r ≠ 1 := by
+    intro h
+    apply hne
+    field_simp at h
+    linarith
+  have hcancel :
+      log r / (r - 1) * (t - logMean r) = t / logMean r - 1 := by
+    unfold logMean
+    field_simp
+  have hkey : log (t / logMean r) < t / logMean r - 1 :=
+    Real.log_lt_sub_one_of_pos (div_pos ht hmpos) hune
+  rw [Real.log_div ht.ne' hmpos.ne', ← hcancel] at hkey
+  have hid :
+      logGap d r (logMean r) - logGap d r t
+        = d * (log r / (r - 1) * (t - logMean r)
+            - (log t - log (logMean r))) := by
+    unfold logGap; ring
+  have hpos :
+      0 < d * (log r / (r - 1) * (t - logMean r)
+          - (log t - log (logMean r))) :=
+    mul_pos hd (by linarith)
+  linarith
+
+/-- Proposition 1.3, in full: the span information is the *maximum* of the
+    log-gap over the window, attained at the logarithmic mean. -/
+theorem spanInformation_eq_max (d r : ℝ) (hd : 0 ≤ d) (hr : 1 < r) :
+    IsGreatest (logGap d r '' Set.Ioi 0) (spanInformation d r) := by
+  have hlog : 0 < log r := log_pos hr
+  have hr1 : 0 < r - 1 := by linarith
+  have hmpos : 0 < logMean r := div_pos hr1 hlog
+  constructor
+  · exact ⟨logMean r, hmpos, spanInformation_eq_logGap_logMean d r hr⟩
+  · rintro _ ⟨t, ht, rfl⟩
+    rw [← spanInformation_eq_logGap_logMean d r hr]
+    exact logGap_le_logGap_logMean d r t hd hr ht
 
 end ActiveGeometry.Measurability
