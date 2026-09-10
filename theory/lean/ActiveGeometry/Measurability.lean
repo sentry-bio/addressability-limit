@@ -3,7 +3,7 @@
   ==============================================
 
   Elementary real identities behind the finite-sample growth-class test.
-  See theory/MEASURABILITY.md.
+  See the `Measurability.lean` section of `theory/lean/README.md`.
 
   On a radial window of ratio r > 1, the unique exponential and the unique
   polynomial that match at both endpoints have log-occupancy difference

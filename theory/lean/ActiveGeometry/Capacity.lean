@@ -110,4 +110,27 @@ theorem saturated_is_addressable
   unfold Addressable
   exact hsaturated.le
 
+/-! ### Conditional boundary selection
+
+This is the precise content available to the optimization leg. If a feasible
+rate set contains every rate up to its ceiling and an independently supplied
+cost strictly decreases with rate, then a cost minimizer lies on the capacity
+boundary. The theorem supplies neither the cost nor a dynamics that minimizes
+it. -/
+
+/-- `x` minimizes `J` over the feasible set `S`. -/
+def MinimizesOn (J : ℝ → ℝ) (S : Set ℝ) (x : ℝ) : Prop :=
+  x ∈ S ∧ ∀ y ∈ S, J x ≤ J y
+
+/-- A strictly rate-decreasing cost selects the endpoint of a full feasible
+    interval. This is a conditional variational theorem, not a saturation
+    hypothesis and not an evolution law. -/
+theorem minimizer_on_Iic_eq_capacity {J : ℝ → ℝ} {C x : ℝ}
+    (hJ : StrictAnti J) (hx : MinimizesOn J (Set.Iic C) x) :
+    x = C := by
+  apply le_antisymm hx.1
+  by_contra hCx
+  have hxC : x < C := lt_of_not_ge hCx
+  exact (not_lt_of_ge (hx.2 C (by simp))) (hJ hxC)
+
 end ActiveGeometry.Capacity

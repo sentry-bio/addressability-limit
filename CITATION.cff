@@ -1,0 +1,30 @@
+cff-version: 1.2.0
+message: "If you use this work, please cite the manuscript and archive the exact repository revision used."
+title: "The Addressability Limit"
+type: software
+authors:
+  - family-names: Fenn
+    given-names: Rohit
+  - family-names: Fenn
+    given-names: Amit
+repository-code: "https://github.com/sentry-bio/addressability-limit"
+license: MIT
+abstract: >-
+  Machine-checked companion to a geometric capacity bound for
+  information-generating hierarchies, including its finite-radius packing
+  kernel and constrained-capacity profile.
+keywords:
+  - metric packing
+  - information capacity
+  - hyperbolic geometry
+  - Lean 4
+  - formalization
+preferred-citation:
+  type: article
+  title: "The Addressability Limit: A Geometric Capacity Bound for Information-Generating Hierarchies"
+  authors:
+    - family-names: Fenn
+      given-names: Rohit
+    - family-names: Fenn
+      given-names: Amit
+  year: 2026
