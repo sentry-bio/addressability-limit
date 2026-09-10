@@ -14,6 +14,7 @@ this is the floor rather than a signal.
 cd theory/lean
 lake exe cache get
 lake build
+lake env lean ActiveGeometry/Audit.lean
 ```
 
 ## The statement to cite
@@ -35,9 +36,10 @@ This is what a measurement computes. The asymptotic version discards an
 additive constant, which is why an achieved rate can exceed `h_pack` at finite
 radius without violating anything.
 
-## A host has a profile, not a capacity
+## A host has a parameterized profile, not one capacity
 
-The organising idea of `Constrained.lean`. Two hosts can hold the same number of
+The organising idea of `Constrained.lean`. At a declared basepoint, resolution,
+source family, and radial rate, two hosts can hold the same number of
 distinguishable states and differ completely in their ability to preserve
 ancestry, refinement, or metric relations. So the scalar question *how much
 information fits?* is replaced by
@@ -60,8 +62,8 @@ which separates:
 | `Represents o ε 𝒜 σ c` | can **this** source be held here? | an experiment |
 | `Achievable o ε 𝔖 𝒜 β c` | what rates does the host support over a **declared** family `𝔖`? | a theorem |
 
-Obligations form a **product poset**, not a chain. Nothing orders retention
-against relational fidelity.
+There are two orderings, not one ladder: obligations are ordered by logical
+implication, while declared source families are ordered by inclusion.
 
 - *metric obligations* — what of the source's shape must survive:
   `Faithful` (cardinality and separation), `Radial` (the rooted budget),
@@ -111,8 +113,17 @@ pin this down, and both live in the file so neither can rot:
 | `addressable_of_achievable` | **the base square**: every rung, over every family, obeys `β ≤ c·h_pack` |
 | `Rates` / `Rates_bddAbove` | capacity as a **set**, and its boundedness from the base square |
 | `capacity` | the scalar, derived afterwards, with every dependency explicit |
+| `capacity_mono_obligation` / `capacity_mono_family` | scalar profile monotonicity under the two orderings |
+| `capacity_eq_packing_of_endpoint_achievable` | exact profile entry once an independent endpoint construction supplies achievability |
+| `capacity_block_eq_packing` | that construction: depthwise recoding of optimal packings |
+| `structured_addressability_limit` | `β ≤ C_𝒜 ≤ C_block`, with block equality once the endpoint is supplied |
+| `Source.ULF` / `geometricSource` | finite-rate generation; the canonical relational source class |
+| `Rates_isometry_eq` | exact transport of rate sets under isometric host equivalence and compatible obligations |
+| `Rates_faithful_eq_block` / `Rates_radial_eq_block` | zero-tax laws for requirements already included in `Base` |
 | `not_achievable_pos_of_hpack_zero` | the trichotomy's third horn, at every rung and any radial rate |
-| `Separates` | the **target** of a separation theorem — inhabited nowhere |
+| `Separates` | the **target** of a separation theorem |
+| `unit_separates_block_from_malformed_causal` | a strict causal sanity witness, not the geometric balloon |
+| `balloon_separates` | geometric block-versus-relational gap on the ULF binary tree |
 
 Capacity is a set before it is a number. Defining the scalar first invites
 `sSup` of an unbounded real set, which silently returns `0`.
@@ -127,6 +138,7 @@ Capacity is a set before it is a number. Defining the scalar first invites
 | `not_addressable_of_lt` | the contrapositive — the empirically observable content |
 | `efficiency_le_one` | `η = β/(c·h_cap) ≤ 1` |
 | `addressability_forces_positive_entropy` | `β>0`, `c>0` imply `h_cap>0` |
+| `minimizer_on_Iic_eq_capacity` | a strictly rate-decreasing cost, if supplied, selects the feasible endpoint |
 
 ### `Chart.lean` — the space-form chart (optional)
 
@@ -154,11 +166,12 @@ formalized.
 Used throughout, and worth keeping distinct:
 
 - **defined** — an object exists; nothing is proved about it. `tax`,
-  `availability`, `Relational`, `Causal`, `Separates`.
+  `availability`, `Relational`, `Causal`.
 - **Lean-checked** — proved here. `convergent_rate_addressability_limit`,
-  `addressable_of_achievable`, `Rates_bddAbove`, the two one-point witnesses.
-- **paper-proved** — proved in the manuscript, not here. Theorem 5.3, the
-  balloon, Theorem 7.1.
+  `addressable_of_achievable`, `Rates_bddAbove`, the two one-point witnesses,
+  `balloon_separates`.
+- **paper-proved** — proved in the manuscript, not here. Theorem 5.3,
+  Proposition 6.2.
 - **open** — neither.
 
 A definition is not a computed capacity. A monotonicity lemma is not an
@@ -167,16 +180,18 @@ achievability theory. A paper theorem is not a Lean theorem.
 ## What this library does not establish
 
 1. the full limsup generalization of the convergent-rate packing theorem;
-2. achievability at **any** rung above the block one — no member of the profile
-   beyond `C_block` is computed here;
-3. whether `Separates` is inhabited at any pair of rungs;
-4. transformation laws for `capacity` under quasi-isometry, and therefore
+2. relational (or nested/causal) achievability — the block identity is now
+   asymptotic under depthwise recoding, not under successive refinement;
+3. homogeneous positivity or zero tax as theorems (Tessera/Kerr/Skenderi are
+   cited evidence, not Lean);
+4. rescaling and quasi-isometric comparison laws for `capacity`, and therefore
    whether a bare `θ(M)` is a licensed notation at all — exponential growth
-   rates at fixed `ε` are not expected to be quasi-isometry invariants;
+   rates at fixed `ε` are not expected to be quasi-isometry invariants (exact
+   isometry transport is checked);
 5. equivalence of packing and volume entropy under bounded geometry;
 6. the space-form classification or the hyperbolic volume formula;
-7. Theorem 4.4 (Skenderi / weighted relational capacity of ℍⁿ_κ);
-8. Theorem 7.1 (Heintze isotropy / axiom A3);
+7. Theorem 5.3 (Skenderi / weighted relational capacity of ℍⁿ_κ);
+8. Proposition 6.2 (Heintze isotropy / axiom A3);
 9. the Buneman/Gromov tree-classification theorems, or Sarkar's embedding;
 10. a physical dynamics toward capacity saturation;
 11. empirical membership of any biological or linguistic system;

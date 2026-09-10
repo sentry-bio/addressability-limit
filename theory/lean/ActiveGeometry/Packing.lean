@@ -46,8 +46,8 @@
   hierarchy's relational metric.
 
   Not formalized here (or anywhere in this library): the paper limsup
-  theorem; Theorem 4.4 (Skenderi / weighted relational capacity of `ℍⁿ_κ`);
-  Theorem 7.1 (Heintze isotropy / axiom A3).
+  theorem; Theorem 5.3 (Skenderi / weighted relational capacity of `ℍⁿ_κ`);
+  Proposition 6.2 (Heintze isotropy / axiom A3).
 -/
 
 import ActiveGeometry.Capacity
@@ -155,6 +155,57 @@ theorem exists_optimal_blockCode
   · simpa only [hCfinite.coe_toFinset] using hcontained
   · rw [← Set.ncard_eq_toFinset_card C hCfinite]
     simpa only [Set.ncard_def, packingCount] using congrArg ENat.toNat hcard
+
+/-- Every nonempty ball admits at least the basepoint as a one-point code. -/
+theorem one_le_packingCount
+    (o : M) (ε : ℝ≥0) (ρ : ℝ)
+    (hρ : 0 ≤ ρ) (hfinite : HasFinitePacking o ε) :
+    1 ≤ packingCount o ε ρ := by
+  have hsep : Metric.IsSeparated ε ({o} : Set M) :=
+    Metric.IsSeparated.singleton
+  have hsub : ({o} : Set M) ⊆ Metric.closedBall o ρ := by
+    intro x hx
+    simp only [Set.mem_singleton_iff] at hx
+    subst hx
+    exact Metric.mem_closedBall.2 (by simpa using hρ)
+  have henat :
+      ((1 : ℕ) : ℕ∞) ≤ Metric.packingNumber ε (Metric.closedBall o ρ) := by
+    simpa [Set.encard_singleton] using hsep.encard_le_packingNumber hsub
+  simpa [packingCount] using ENat.toNat_le_toNat henat (hfinite hρ)
+
+/-- A chosen finite codebook attaining the packing number. Independent choices
+    at different radii need not be nested: this is depthwise recoding. -/
+noncomputable def optimalBlockCodebook (o : M) (ε : ℝ≥0) (ρ : ℝ)
+    (hρ : 0 ≤ ρ) (hfinite : HasFinitePacking o ε) : Finset M :=
+  Classical.choose (exists_optimal_blockCode o ε ρ hρ hfinite)
+
+theorem optimalBlockCodebook_spec (o : M) (ε : ℝ≥0) (ρ : ℝ)
+    (hρ : 0 ≤ ρ) (hfinite : HasFinitePacking o ε) :
+    Metric.IsSeparated ε
+        ((optimalBlockCodebook o ε ρ hρ hfinite : Set M)) ∧
+      ((optimalBlockCodebook o ε ρ hρ hfinite : Set M) ⊆
+        Metric.closedBall o ρ) ∧
+      (optimalBlockCodebook o ε ρ hρ hfinite).card =
+        packingCount o ε ρ :=
+  Classical.choose_spec (exists_optimal_blockCode o ε ρ hρ hfinite)
+
+theorem optimalBlockCodebook_separated (o : M) (ε : ℝ≥0) (ρ : ℝ)
+    (hρ : 0 ≤ ρ) (hfinite : HasFinitePacking o ε) :
+    Metric.IsSeparated ε
+      ((optimalBlockCodebook o ε ρ hρ hfinite : Set M)) :=
+  (optimalBlockCodebook_spec o ε ρ hρ hfinite).1
+
+theorem optimalBlockCodebook_subset (o : M) (ε : ℝ≥0) (ρ : ℝ)
+    (hρ : 0 ≤ ρ) (hfinite : HasFinitePacking o ε) :
+    ((optimalBlockCodebook o ε ρ hρ hfinite : Set M) ⊆
+      Metric.closedBall o ρ) :=
+  (optimalBlockCodebook_spec o ε ρ hρ hfinite).2.1
+
+theorem optimalBlockCodebook_card (o : M) (ε : ℝ≥0) (ρ : ℝ)
+    (hρ : 0 ≤ ρ) (hfinite : HasFinitePacking o ε) :
+    (optimalBlockCodebook o ε ρ hρ hfinite).card =
+      packingCount o ε ρ :=
+  (optimalBlockCodebook_spec o ε ρ hρ hfinite).2.2
 
 /-- Local finiteness of packing is a theorem, not an assumption, for the entire
     intended host class: proper metric spaces (ℝⁿ, hyperbolic space, and every
@@ -347,8 +398,8 @@ theorem convergent_rate_addressability_limit_of_hasFinitePacking
     host class, not an extra assumption.
 
     Cite this declaration for the Lean-checked ordinary-limit case. The
-    paper's limsup formulation is the Addressability Limit. Theorem 4.4
-    (weighted relational capacity of `ℍⁿ_κ`) and Theorem 7.1 (Heintze / A3)
+    paper's limsup formulation is the Addressability Limit. Theorem 5.3
+    (weighted relational capacity of `ℍⁿ_κ`) and Proposition 6.2 (Heintze / A3)
     are not this theorem and are not Lean. -/
 theorem convergent_rate_addressability_limit
     {H : Type*} [ProperSpace M]

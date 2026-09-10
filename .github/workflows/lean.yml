@@ -31,4 +31,15 @@ jobs:
 
       - name: Build
         working-directory: theory/lean
-        run: lake build
+        run: |
+          lake exe cache get
+          lake build
+
+      - name: Audit public theorem axioms
+        working-directory: theory/lean
+        run: |
+          lake env lean ActiveGeometry/Audit.lean | tee axiom-audit.txt
+          if grep -q "sorryAx" axiom-audit.txt; then
+            echo "Unexpected sorryAx in public theorem surface"
+            exit 1
+          fi
